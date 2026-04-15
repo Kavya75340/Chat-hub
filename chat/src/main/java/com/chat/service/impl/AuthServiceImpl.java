@@ -1,0 +1,134 @@
+package com.chat.service.impl;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.chat.dto.auth.AuthResponseDTO;
+import com.chat.dto.auth.LoginRequestDTO;
+import com.chat.dto.auth.RegisterRequestDTO;
+import com.chat.entity.User;
+import com.chat.enums.UserStatus;
+import com.chat.repository.UserRepository;
+import com.chat.service.AuthService;
+import com.chat.utils.JwtUtil;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class AuthServiceImpl implements AuthService {
+
+    private final UserRepository userRepository;
+
+    private final PasswordEncoder passwordEncoder;
+
+    private final JwtUtil jwtUtil;
+
+    @Override
+    public AuthResponseDTO register(RegisterRequestDTO dto) {
+
+        // email check
+        if(userRepository
+                .findByEmail(dto.getEmail())
+                .isPresent()) {
+
+            throw new RuntimeException("Email already exists");
+        }
+
+        // phone check
+        if(userRepository
+                .findByPhoneNumber(dto.getPhoneNumber())
+                .isPresent()) {
+
+            throw new RuntimeException("Phone number already exists");
+        }
+
+        User user = User.builder()
+
+                .name(dto.getName())
+
+                .phoneNumber(dto.getPhoneNumber())
+
+                .email(dto.getEmail())
+
+                .password(
+                        passwordEncoder.encode(
+                                dto.getPassword()
+                        )
+                )
+
+                .status(UserStatus.OFFLINE)
+
+                .build();
+
+        User savedUser = userRepository.save(user);
+
+        String token = jwtUtil.generateToken(
+
+                savedUser.getPhoneNumber()
+        );
+
+        return AuthResponseDTO.builder()
+
+                .userId(savedUser.getId())
+
+                .name(savedUser.getName())
+
+                .phoneNumber(savedUser.getPhoneNumber())
+
+                .status(savedUser.getStatus())
+
+                .token(token)
+
+                .build();
+    }
+
+    @Override
+    public AuthResponseDTO login(LoginRequestDTO dto) {
+
+        User user = userRepository
+
+                .findByPhoneNumber(dto.getPhoneNumber())
+
+                .orElseThrow(
+
+                        () -> new RuntimeException("User not found")
+                );
+
+        if(!passwordEncoder.matches(
+
+                dto.getPassword(),
+
+                user.getPassword()
+
+        )){
+
+            throw new RuntimeException("Invalid password");
+        }
+
+        // update status
+
+        user.setStatus(UserStatus.ONLINE);
+
+        userRepository.save(user);
+
+        String token = jwtUtil.generateToken(
+
+                user.getPhoneNumber()
+        );
+
+        return AuthResponseDTO.builder()
+
+                .userId(user.getId())
+
+                .name(user.getName())
+
+                .phoneNumber(user.getPhoneNumber())
+
+                .status(user.getStatus())
+
+                .token(token)
+
+                .build();
+    }
+}
