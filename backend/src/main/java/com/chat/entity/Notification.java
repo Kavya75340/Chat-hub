@@ -32,6 +32,8 @@ public class Notification {
 
     private Long userId;
 
+    private Long senderId;
+
     private String message;
 
     @Enumerated(EnumType.STRING)
@@ -42,4 +44,5 @@ public class Notification {
     private LocalDateTime timestamp;
 
     private String referenceId;
+    private String chatId;
 }

@@ -1,7 +1,8 @@
 package com.chat.service.impl;
 
-import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -22,102 +23,77 @@ public class ChatRoomServiceImpl implements ChatRoomService {
     private final ChatRoomRepository chatRoomRepository;
     private final UserRepository userRepository;
 
-        @Override
-        public ChatRoomResponseDTO createChatRoom(ChatRoomRequestDTO dto) {
+    // ================= CREATE CHAT =================
+    @Override
+public ChatRoomResponseDTO createChatRoom(ChatRoomRequestDTO dto, String phone) {
 
-            // check existing chat
-            Optional<ChatRoom> existingRoom =
-                    chatRoomRepository
-                            .findBySenderIdAndReceiverId(
-                                    dto.getSenderId(),
-                                    dto.getReceiverId()
-                            );
-                    
-            if(existingRoom.isPresent()) {
-
-                ChatRoom room = existingRoom.get();
-
-                return ChatRoomResponseDTO.builder()
-
-                        .chatId(room.getChatId())
-
-                        .senderId(room.getSender().getId())
-
-                        .receiverId(room.getReceiver().getId())
-
-                        .build();
-            }
-
-            // reverse check
-            Optional<ChatRoom> reverseRoom =
-                    chatRoomRepository
-                            .findBySenderIdAndReceiverId(
-                                    dto.getReceiverId(),
-                                    dto.getSenderId()
-                            );
-                    
-            if(reverseRoom.isPresent()) {
-
-                ChatRoom room = reverseRoom.get();
-
-                return ChatRoomResponseDTO.builder()
-
-                        .chatId(room.getChatId())
-
-                        .senderId(room.getSender().getId())
-
-                        .receiverId(room.getReceiver().getId())
-
-                        .build();
-            }
-
-    // create new chat
-    User sender = userRepository.findById(dto.getSenderId())
+    User sender = userRepository
+            .findByPhoneNumber(phone)
             .orElseThrow(() -> new RuntimeException("Sender not found"));
 
-    User receiver = userRepository.findById(dto.getReceiverId())
+    User receiver = userRepository
+            .findById(dto.getReceiverId())
             .orElseThrow(() -> new RuntimeException("Receiver not found"));
 
+    Long u1 = Math.min(sender.getId(), receiver.getId());
+    Long u2 = Math.max(sender.getId(), receiver.getId());
+
+    ChatRoom existing = chatRoomRepository
+            .findByUser1IdAndUser2Id(u1, u2)
+            .orElse(null);
+
+    if (existing != null) {
+        return map(existing);
+    }
+
+    // 🔥 fetch normalized users
+    User user1 = userRepository.findById(u1).orElseThrow();
+    User user2 = userRepository.findById(u2).orElseThrow();
+
     ChatRoom chatRoom = ChatRoom.builder()
-
             .chatId(UUID.randomUUID().toString())
-
-            .sender(sender)
-
-            .receiver(receiver)
-
+            .user1(user1)
+            .user2(user2)
             .build();
 
-    ChatRoom saved = chatRoomRepository.save(chatRoom);
-
-    return ChatRoomResponseDTO.builder()
-
-            .chatId(saved.getChatId())
-
-            .senderId(saved.getSender().getId())
-
-            .receiverId(saved.getReceiver().getId())
-
-            .build();
+    return map(chatRoomRepository.save(chatRoom));
 }
 
+    // ================= GET CHAT ID =================
     @Override
     public String getChatId(Long senderId, Long receiverId) {
 
-        Optional<ChatRoom> existingRoom =
-                chatRoomRepository.findBySenderIdAndReceiverId(senderId, receiverId);
+        Long u1 = Math.min(senderId, receiverId);
+        Long u2 = Math.max(senderId, receiverId);
 
-        if(existingRoom.isPresent()) {
-            return existingRoom.get().getChatId();
-        }
+        return chatRoomRepository
+                .findByUser1IdAndUser2Id(u1, u2)
+                .map(ChatRoom::getChatId)
+                .orElse(UUID.randomUUID().toString());
+    }
 
-        Optional<ChatRoom> reverseRoom =
-                chatRoomRepository.findBySenderIdAndReceiverId(receiverId, senderId);
+    // ================= GET MY CHATS =================
+    @Override
+    public List<ChatRoomResponseDTO> getUserChats(String phone) {
 
-        if(reverseRoom.isPresent()) {
-            return reverseRoom.get().getChatId();
-        }
+        User user = userRepository.findByPhoneNumber(phone)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return UUID.randomUUID().toString();
+        List<ChatRoom> chats = chatRoomRepository
+                .findByUser1IdOrUser2Id(user.getId(), user.getId());
+
+        return chats.stream()
+                .map(this::map)
+                .collect(Collectors.toList());
+    }
+
+    // ================= MAPPER =================
+    private ChatRoomResponseDTO map(ChatRoom room) {
+
+        return ChatRoomResponseDTO.builder()
+                .chatId(room.getChatId())
+                .senderId(room.getUser1().getId())
+                .receiverId(room.getUser2().getId())
+                .build();
     }
 }

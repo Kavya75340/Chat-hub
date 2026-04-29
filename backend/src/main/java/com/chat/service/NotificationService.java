@@ -7,11 +7,11 @@ import com.chat.dto.notification.NotificationResponseDTO;
 
 public interface NotificationService {
 
-    NotificationResponseDTO create(NotificationDTO dto);
+    NotificationResponseDTO create(NotificationDTO dto ,String phone);
 
-    List<NotificationResponseDTO> getUserNotifications(Long userId);
+    List<NotificationResponseDTO> getUserNotifications(String phone);
 
-    void markAsSeen(Long notificationId);
+    void markAsSeen(Long notificationId ,String phone);
 
-    long getUnreadCount(Long userId);
+    long getUnreadCount(String phone);
 }

@@ -1,5 +1,7 @@
 package com.chat.service.impl;
 
+import java.time.LocalDateTime;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -106,10 +108,8 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid password");
         }
 
-        // update status
-
         user.setStatus(UserStatus.ONLINE);
-
+        user.setLastSeen(LocalDateTime.now()); 
         userRepository.save(user);
 
         String token = jwtUtil.generateToken(

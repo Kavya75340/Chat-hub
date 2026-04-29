@@ -1,7 +1,12 @@
 package com.chat.dto.group;
 
 import java.util.List;
-import lombok.*;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -19,6 +24,8 @@ public class GroupResponseDTO {
     private String groupImage;
 
     private Long createdBy;
+
+    private String chatId;
 
     private List<Long> members;
 }

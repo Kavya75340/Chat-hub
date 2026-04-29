@@ -15,8 +15,9 @@ import lombok.Setter;
 @Builder
 public class NotificationDTO {
 
-    private Long userId;
+    private Long receiverId;
     private String message;
     private NotificationType type;
     private String referenceId;
+    private String chatId; 
 }

@@ -1,5 +1,7 @@
 package com.chat.dto.message;
 
+import java.time.LocalDateTime;
+
 import com.chat.enums.MessageType;
 
 import lombok.AllArgsConstructor;
@@ -20,4 +22,6 @@ public class MessageRequestDTO {
     private Long receiverId;
     private String content;
     private MessageType messageType;
+    private Boolean scheduled;           
+    private LocalDateTime scheduledTime;
 }

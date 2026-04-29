@@ -2,9 +2,10 @@ import { useState } from "react";
 
 import Register from "./Register";
 
-import Chat from "./Chat";
+// import Chat from "./Chat";
 
 import Login from "./Login";
+import { FloatingLayout } from "../components/layout/FloatingLayout";
 
 const Home = () => {
     const [page, setPage] = useState("login");
@@ -13,11 +14,20 @@ const Home = () => {
         return <Register setPage={setPage} />;
     }
 
-    if (page === "chat") {
-        return <Chat />;
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+        return <Login />;
     }
 
-    return <Login setPage={setPage} />;
+    return (
+        <main className="min-h-screen w-full">
+            <h1 className="sr-only">
+                ChatHub — premium AI-powered chat application
+            </h1>
+            <FloatingLayout />
+        </main>
+    );
 };
 
 export default Home;

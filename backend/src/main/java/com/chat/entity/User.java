@@ -1,5 +1,7 @@
 package com.chat.entity;
 
+import java.time.LocalDateTime;
+
 import com.chat.enums.UserStatus;
 
 import jakarta.persistence.Column;
@@ -48,5 +50,6 @@ public class User {
     
     @Enumerated(EnumType.STRING)
     private UserStatus status;
+    private LocalDateTime lastSeen;
 
 }

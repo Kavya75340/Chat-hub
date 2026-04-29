@@ -26,19 +26,25 @@ export default function Login() {
         e.preventDefault();
 
         try {
-            const res = await loginUser(form);
+            setLoading(true);
 
-            console.log("login response:", res);
+            const data = await loginUser(form);
 
-            // token save
-            localStorage.setItem("token", res.token);
+            console.log("LOGIN RESPONSE:", data);
 
-            // user save
-            localStorage.setItem("user", JSON.stringify(res));
+            if (!data?.token) {
+                throw new Error("Token not found");
+            }
+
+            localStorage.setItem("token", data.token);
+            localStorage.setItem("user", JSON.stringify(data));
 
             navigate("/chat");
         } catch (err) {
-            console.log(err);
+            console.log("LOGIN ERROR:", err);
+            setError("Invalid credentials");
+        } finally {
+            setLoading(false);
         }
     };
 

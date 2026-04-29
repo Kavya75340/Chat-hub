@@ -18,7 +18,7 @@ import lombok.Setter;
 @Table(
         name = "chat_rooms",
         uniqueConstraints = {
-                @UniqueConstraint(columnNames = {"sender_id", "receiver_id"})
+                @UniqueConstraint(columnNames = {"user1_id", "user2_id"})
         }
 )
 @Getter
@@ -33,12 +33,12 @@ public class ChatRoom {
     private Long id;
 
     private String chatId;
+    
+    @ManyToOne
+    @JoinColumn(name = "user1_id")
+    private User user1;
 
     @ManyToOne
-    @JoinColumn(name = "sender_id")
-    private User sender;
-
-    @ManyToOne
-    @JoinColumn(name = "receiver_id")
-    private User receiver;
+    @JoinColumn(name = "user2_id")
+    private User user2;
 }

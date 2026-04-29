@@ -2,6 +2,7 @@ package com.chat.dto.message;
 
 import java.time.LocalDateTime;
 
+import com.chat.enums.MessageStatus;
 import com.chat.enums.MessageType;
 
 import lombok.AllArgsConstructor;
@@ -24,5 +25,7 @@ public class MessageResponseDTO {
     private MessageType messageType;
     private String content;
     private LocalDateTime timestamp;
-    private boolean seen;
+    private MessageStatus status;
+    private Boolean scheduled;           
+    private LocalDateTime scheduledTime;
 }

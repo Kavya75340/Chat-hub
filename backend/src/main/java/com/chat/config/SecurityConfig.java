@@ -24,42 +24,35 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http)
-            throws Exception {
-
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    
         http
-
-                .csrf(csrf -> csrf.disable())
-
-                .authorizeHttpRequests(auth -> auth
-
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/users/**").authenticated()
-                        .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers("/api/chatroom/**").authenticated()
-                        .requestMatchers("/api/message/**").authenticated()
-                        .requestMatchers("/api/file/**").authenticated()
-                        .requestMatchers("/api/group/**").authenticated()
-                        .requestMatchers("/api/notification/**").authenticated()
-
-                        .anyRequest()
-                        .authenticated()
-
-                )
-
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
-                )
-
-                .addFilterBefore(
-
-                        jwtAuthFilter,
-
-                        UsernamePasswordAuthenticationFilter.class
-                );
-
+            .cors(cors -> {})
+            .csrf(csrf -> csrf.disable())
+    
+            .headers(headers -> headers
+                .frameOptions(frame -> frame.disable())
+            )
+    
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/uploads/**").permitAll()
+                    .requestMatchers("/ws/**", "/ws/info/**").permitAll()
+                    .requestMatchers("/api/users/**").authenticated()
+                    .requestMatchers("/api/chatroom/**").authenticated()
+                    .requestMatchers("/api/message/**").authenticated()
+                    .requestMatchers("/api/file/**").authenticated()
+                    .requestMatchers("/api/group/**").authenticated()
+                    .requestMatchers("/api/notification/**").authenticated()
+                    .anyRequest().authenticated()
+            )
+    
+            .sessionManagement(session ->
+                    session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+    
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+    
         return http.build();
-    }
+    }    
 }

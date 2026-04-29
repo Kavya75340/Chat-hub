@@ -2,6 +2,7 @@ package com.chat.entity;
 
 import java.time.LocalDateTime;
 
+import com.chat.enums.MessageStatus;
 import com.chat.enums.MessageType;
 
 import jakarta.persistence.Column;
@@ -40,7 +41,7 @@ public class Message {
     private User sender;
 
     @ManyToOne
-    @JoinColumn(name = "receiver_id")
+    @JoinColumn(name = "receiver_id", nullable=true)
     private User receiver;
 
     @Column(columnDefinition = "TEXT")
@@ -51,6 +52,11 @@ public class Message {
 
     private LocalDateTime timestamp;
 
-    private boolean seen;
+    @Enumerated(EnumType.STRING)
+    private MessageStatus status;
+
+    private LocalDateTime scheduledTime;
+
+    private Boolean scheduled;
 
 }

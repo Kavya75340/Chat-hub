@@ -1,28 +1,12 @@
 import API from "./axios";
 
-export const uploadFile = (file, chatId, senderId) => {
+export const uploadFile = (file, chatId) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("chatId", chatId);
 
-    const formData = new FormData();
-
-    formData.append("file", file);
-    formData.append("chatId", chatId);
-    formData.append("senderId", senderId);
-
-    return API.post(
-        "/file/upload",
-        formData,
-        {
-            headers:{
-                "Content-Type":
-                "multipart/form-data"
-            }
-        }
-    );
-
+  return API.post("/file/upload", formData);
 };
 
-export const getFiles = (chatId) => {
-
-return API.get(`/file/${chatId}`);
-
-};
+export const getFiles = (chatId) =>
+  API.get(`/file/${chatId}`);

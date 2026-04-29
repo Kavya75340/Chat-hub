@@ -30,4 +30,6 @@ public class NotificationResponseDTO {
     private LocalDateTime timestamp;
 
     private String referenceId;
+    private Long senderId;  
+    private String chatId;  
 }

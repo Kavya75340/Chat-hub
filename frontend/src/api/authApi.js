@@ -1,17 +1,16 @@
-import axios from "axios";
-
-const API = "http://localhost:8080/api/auth";
+import API from "./axios";
 
 export const loginUser = async (data) => {
+  const res = await API.post("/auth/login", data);
 
-    const res = await axios.post(`${API}/login`, data);
+  // 🔥 FIX START
+  localStorage.setItem("token", res.data.token);
+  localStorage.setItem("user", JSON.stringify(res.data));
+  // 🔥 FIX END
 
-    return res.data;   // IMPORTANT
+  return res.data;
 };
 
 export const registerUser = async (data) => {
-
-    const res = await axios.post(`${API}/register`, data);
-
-    return res.data;
+  return API.post("/auth/register", data);
 };

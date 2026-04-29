@@ -7,8 +7,15 @@ import com.chat.dto.message.MessageResponseDTO;
 
 public interface MessageService {
 
-    MessageResponseDTO sendMessage(MessageRequestDTO dto);
+    MessageResponseDTO sendMessage(MessageRequestDTO dto,String phoneNumber);
 
-    List<MessageResponseDTO> getMessages(String chatId);
+    List<MessageResponseDTO> getMessages(String chatId,String phoneNumber);
 
+    void markDelivered(String chatId, String phoneNumber);
+
+    void markSeen(String chatId,String phoneNumber);
+
+    void deleteMessage(Long id, String phoneNumber);
+    
+    MessageResponseDTO editMessage(Long id, MessageRequestDTO dto ,String phoneNumber);
 }

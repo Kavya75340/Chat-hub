@@ -1,6 +1,6 @@
 package com.chat.service;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 import com.chat.dto.user.UserRequestDTO;
 import com.chat.dto.user.UserResponseDTO;
@@ -11,8 +11,9 @@ public interface UserService {
 
     UserResponseDTO updateUser(Long id, UserRequestDTO dto);
 
-    List<UserResponseDTO> searchUser(String keyword);
+    Page<UserResponseDTO> searchUser(String keyword, int page, int size);
 
     void updateOnlineStatus(Long userId, boolean online);
 
+    void deleteUser(Long id);
 }

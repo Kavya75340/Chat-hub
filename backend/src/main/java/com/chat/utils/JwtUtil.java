@@ -58,4 +58,23 @@ public class JwtUtil {
                 .getSubject();
     }
 
+    public boolean validateToken(String token, String phone) {
+
+        final String extractedPhone = extractPhone(token);
+    
+        return extractedPhone.equals(phone) && !isTokenExpired(token);
+    }
+    
+    private boolean isTokenExpired(String token) {
+    
+        Date expiration = Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration();
+    
+        return expiration.before(new Date());
+    }    
+
 }

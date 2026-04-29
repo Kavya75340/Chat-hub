@@ -1,11 +1,15 @@
 package com.chat.service.impl;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import com.chat.dto.user.*;
+import com.chat.dto.user.UserRequestDTO;
+import com.chat.dto.user.UserResponseDTO;
 import com.chat.entity.User;
 import com.chat.enums.UserStatus;
 import com.chat.repository.UserRepository;
@@ -19,6 +23,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
 
+    // ================= CURRENT USER =================
     @Override
     public UserResponseDTO getCurrentUser(String phone) {
 
@@ -28,55 +33,84 @@ public class UserServiceImpl implements UserService {
         return map(user);
     }
 
+    // ================= UPDATE USER =================
     @Override
     public UserResponseDTO updateUser(Long id, UserRequestDTO dto) {
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        user.setName(dto.getName());
+        //  validation
+        if (dto.getName() != null && !dto.getName().isBlank()) {
+            user.setName(dto.getName());
+        }
 
-        user.setProfilePic(dto.getProfilePic());
+        if (dto.getProfilePic() != null) {
+            user.setProfilePic(dto.getProfilePic());
+        }
 
-        user.setAbout(dto.getAbout());
+        if (dto.getAbout() != null) {
+            user.setAbout(dto.getAbout());
+        }
 
-        if(dto.getStatus() != null){
-
+        if (dto.getStatus() != null) {
             user.setStatus(dto.getStatus());
         }
 
         return map(userRepository.save(user));
     }
 
+    // ================= SEARCH + PAGINATION =================
     @Override
-    public List<UserResponseDTO> searchUser(String keyword) {
+    public Page<UserResponseDTO> searchUser(String keyword, int page, int size) {
 
-        return userRepository
-                .findByNameContainingIgnoreCase(keyword)
-                .stream()
-                .map(this::map)
-                .collect(Collectors.toList());
+        Pageable pageable = PageRequest.of(page, size, Sort.by("name").ascending());
+
+        Page<User> users = userRepository
+                .findByNameContainingIgnoreCaseOrPhoneNumberContaining(
+                        keyword,
+                        keyword,
+                        pageable
+                );
+
+        return users.map(this::map);
     }
 
+    // ================= ONLINE STATUS =================
     @Override
     public void updateOnlineStatus(Long userId, boolean online) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        user.setStatus(
+        user.setStatus(online ? UserStatus.ONLINE : UserStatus.OFFLINE);
 
-                online
-
-                        ? UserStatus.ONLINE
-
-                        : UserStatus.OFFLINE
-        );
+        if (!online) {
+            user.setLastSeen(LocalDateTime.now());
+        }
 
         userRepository.save(user);
     }
 
+    // ================= DELETE USER =================
+    @Override
+    public void deleteUser(Long id) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        userRepository.delete(user);
+    }
+
+    // ================= MAPPER =================
     private UserResponseDTO map(User u) {
+
+        boolean isOnline = false;
+
+        if (u.getLastSeen() != null &&
+                u.getLastSeen().isAfter(LocalDateTime.now().minusSeconds(30))) {
+            isOnline = true;
+        }
 
         return UserResponseDTO.builder()
                 .id(u.getId())
@@ -85,7 +119,7 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(u.getPhoneNumber())
                 .profilePic(u.getProfilePic())
                 .about(u.getAbout())
-                .status(u.getStatus())
+                .status(isOnline ? UserStatus.ONLINE : UserStatus.OFFLINE)
                 .build();
     }
 }

@@ -9,8 +9,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.chat.dto.file.FileResponseDTO;
 import com.chat.entity.Attachment;
+import com.chat.entity.ChatRoom;
+import com.chat.entity.User;
 import com.chat.enums.FileType;
 import com.chat.repository.AttachmentRepository;
+import com.chat.repository.ChatRoomRepository;
+import com.chat.repository.UserRepository;
 import com.chat.service.FileService;
 import com.chat.utils.FileUtil;
 
@@ -26,43 +30,43 @@ public class FileServiceImpl implements FileService {
 
     private final FileUtil fileUtil;
 
+    private final UserRepository userRepository; 
+
+    private final ChatRoomRepository chatRoomRepository; // ADD
+
+    private void validateUserInChat(String chatId, Long userId) {
+
+        ChatRoom chat = chatRoomRepository.findByChatId(chatId)
+                .orElseThrow();
+
+        if (!chat.getUser1().getId().equals(userId) &&
+            !chat.getUser2().getId().equals(userId)) {
+
+            throw new RuntimeException("Unauthorized");
+        }
+    }
+
     @Override
-
     public FileResponseDTO uploadFile(
-
             MultipartFile file,
-
             String chatId,
-
-            Long senderId
-
+            String phoneNumber
     ) throws IOException {
+        User user = userRepository
+        .findByPhoneNumber(phoneNumber)
+        .orElseThrow(() -> new RuntimeException("User not found"));
+        validateUserInChat(chatId, user.getId());
 
-        // detect file type
-
-        FileType fileType = detectType(
-
-                file.getContentType()
-        );
-
-        // save physical file
+        FileType fileType = detectType(file.getContentType());
 
         String fileName = fileUtil.saveFile(file);
 
-        // create db entry
-
         Attachment attachment = Attachment.builder()
-
                 .fileName(fileName)
-
                 .fileType(fileType)
-
                 .fileUrl("/uploads/" + fileName)
-
                 .chatId(chatId)
-
-                .senderId(senderId)
-
+                .senderId(user.getId()) // ✅ FIXED
                 .build();
 
         Attachment saved = attachmentRepository.save(attachment);
@@ -71,7 +75,6 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-
     public List<FileResponseDTO> getFiles(String chatId) {
 
         return attachmentRepository
