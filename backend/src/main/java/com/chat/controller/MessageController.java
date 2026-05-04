@@ -73,5 +73,13 @@ public class MessageController {
               messageService.editMessage(id, dto, auth.getName())
           );
       }
-    
+      @GetMapping("/scheduled/{chatId}")
+      public ResponseEntity<List<MessageResponseDTO>> getScheduledMessages(
+              @PathVariable String chatId,
+              Authentication auth
+      ){
+          return ResponseEntity.ok(
+              messageService.getScheduledMessages(chatId, auth.getName())
+          );
+      }    
 }

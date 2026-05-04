@@ -18,4 +18,8 @@ public interface MessageService {
     void deleteMessage(Long id, String phoneNumber);
     
     MessageResponseDTO editMessage(Long id, MessageRequestDTO dto ,String phoneNumber);
+
+    List<MessageResponseDTO> getScheduledMessages(String chatId, String phoneNumber);
+
+
 }

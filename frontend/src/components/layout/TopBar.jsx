@@ -1,55 +1,63 @@
-import { Search, MoreHorizontal, Sparkles } from "lucide-react";
+import { MoreHorizontal, Sparkles, Bell } from "lucide-react";
 import { Avatar } from "@/components/ui/UserAvatar";
-import { updateUserStatus } from "@/api/userApi";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { getUnreadCount } from "../../api/notificationApi";
 
-export function TopBar() {
-    const navigate = useNavigate();
+export function TopBar({ onOpenProfile, onOpenNotifications }) {
+    const [count, setCount] = useState(0);
     const user = JSON.parse(localStorage.getItem("user"));
 
-    const handleLogout = async () => {
-        if (user) {
-            await updateUserStatus(user.userId, false);
-        }
-
-        localStorage.clear();
-        navigate("/login");
-    };
+    useEffect(() => {
+        getUnreadCount().then((res) => setCount(res.data));
+    }, []);
 
     return (
         <div className="flex items-center justify-between px-5 py-3.5">
-            <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-background">
-                    <Sparkles className="h-3.5 w-3.5" />
+            {/* LEFT */}
+            <div className="flex items-center gap-3">
+                {/* Icon Container */}
+
+                <img src="/logo.png" alt="" className="h-10 w-10" />
+
+                {/* Text Container */}
+                <div className="flex flex-col justify-center leading-tight">
+                    <div className="flex items-baseline gap-1">
+                        <span className="text-lg font-black tracking-tight text-foreground">
+                            Clever
+                            <span className="text-muted-foreground font-medium">
+                                Talk
+                            </span>
+                        </span>
+                    </div>
+                    <span className="text-[8px] font-bold uppercase tracking-[0.1em] text-muted-foreground/70 -mt-0.5">
+                        smarter chat. better connections.
+                    </span>
                 </div>
-                <span className="text-[15px] font-semibold tracking-tight text-foreground">
-                    ChatHub
-                </span>
-                <span className="ml-2 hidden sm:inline-flex items-center rounded-md bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    BETA
-                </span>
             </div>
 
-            <div className="flex items-center gap-1">
-                <button className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hover-bg hover:text-foreground">
-                    <Search className="h-4 w-4" />
+            {/* RIGHT */}
+            <div className="flex items-center gap-2">
+                {/* 🔔 NOTIFICATION BUTTON */}
+                <button
+                    onClick={onOpenNotifications}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-hover-bg"
+                >
+                    <Bell className="h-4 w-4" />
+                    {count > 0 && (
+                        <span className="absolute -top-1 -right-1 text-[9px] bg-red-500 text-white px-1 rounded-full">
+                            {count}
+                        </span>
+                    )}
                 </button>
-                <button className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hover-bg hover:text-foreground">
-                    <MoreHorizontal className="h-4 w-4" />
-                </button>
-                <div className="ml-1">
+
+                {/* PROFILE */}
+                <div onClick={onOpenProfile} className="cursor-pointer">
                     <Avatar
                         initials={user?.name?.slice(0, 2)}
                         size="sm"
                         online={user?.status === "ONLINE"}
                     />
                 </div>
-                <button
-                    onClick={handleLogout}
-                    className="text-sm bg-red-500 text-white px-3 py-1 rounded"
-                >
-                    Logout
-                </button>
             </div>
         </div>
     );

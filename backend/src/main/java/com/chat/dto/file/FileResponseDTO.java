@@ -1,5 +1,7 @@
 package com.chat.dto.file;
 
+import java.time.LocalDateTime;
+
 import com.chat.enums.FileType;
 
 import lombok.AllArgsConstructor;
@@ -21,4 +23,5 @@ public class FileResponseDTO {
     private String fileUrl;
     private String chatId;
     private Long senderId;
+    private LocalDateTime createdAt;
 }

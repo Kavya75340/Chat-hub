@@ -5,7 +5,8 @@ export const loginUser = async (data) => {
 
   // 🔥 FIX START
   localStorage.setItem("token", res.data.token);
-  localStorage.setItem("user", JSON.stringify(res.data));
+  const profileRes = await API.get("/users/me");
+  localStorage.setItem("user", JSON.stringify(profileRes.data));
   // 🔥 FIX END
 
   return res.data;

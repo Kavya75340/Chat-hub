@@ -1,6 +1,7 @@
 import { Search, X, Plus } from "lucide-react";
 import { Avatar } from "@/components/ui/UserAvatar";
 import { cn } from "@/lib/utils";
+import { useState, useMemo } from "react";
 
 export function SlidePanel({
     open,
@@ -10,6 +11,20 @@ export function SlidePanel({
     onClose,
     onCreateGroup,
 }) {
+    const [search, setSearch] = useState("");
+
+    const searchText = search.toLowerCase();
+
+    // ✅ optimized filtering (important)
+    const filteredChats = useMemo(() => {
+        if (!searchText) return chats;
+
+        return chats.filter(
+            (c) =>
+                (c.name || "").toLowerCase().includes(searchText) ||
+                (c.lastMessage || "").toLowerCase().includes(searchText)
+        );
+    }, [searchText, chats]);
     if (!open) return null;
 
     return (
@@ -29,14 +44,14 @@ export function SlidePanel({
                 <div className="flex items-center gap-1">
                     <button
                         onClick={onCreateGroup}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hover-bg hover:text-foreground"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-hover-bg hover:text-foreground"
                     >
                         <Plus className="h-4 w-4" />
                     </button>
 
                     <button
                         onClick={onClose}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-hover-bg hover:text-foreground"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-hover-bg hover:text-foreground"
                     >
                         <X className="h-4 w-4" />
                     </button>
@@ -49,6 +64,8 @@ export function SlidePanel({
                     <Search className="h-3.5 w-3.5 text-muted-2" />
 
                     <input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
                         placeholder="Search conversations"
                         className="w-full bg-transparent text-[13px] text-foreground placeholder:text-muted-2 focus:outline-none"
                     />
@@ -61,8 +78,9 @@ export function SlidePanel({
 
             {/* Chat List */}
             <div className="flex-1 overflow-y-auto px-2 pb-3">
-                {chats.map((c) => {
-                    const isActive = c.id === activeChatId;
+                {filteredChats.map((c) => {
+                    // ✅ FIXED ACTIVE CHECK
+                    const isActive = c.chatId === activeChatId;
 
                     return (
                         <button
@@ -86,13 +104,13 @@ export function SlidePanel({
                                     </span>
 
                                     <span className="shrink-0 text-[11px] text-muted-2">
-                                        {c.time}
+                                        {c.time || ""}
                                     </span>
                                 </div>
 
                                 <div className="flex items-center justify-between gap-2">
                                     <span className="truncate text-[12px] text-muted-foreground">
-                                        {c.lastMessage}
+                                        {c.lastMessage || "No messages yet"}
                                     </span>
 
                                     {c.unread ? (
@@ -105,6 +123,12 @@ export function SlidePanel({
                         </button>
                     );
                 })}
+
+                {filteredChats.length === 0 && (
+                    <div className="text-center text-sm text-muted-foreground mt-4">
+                        No chats found
+                    </div>
+                )}
             </div>
         </div>
     );

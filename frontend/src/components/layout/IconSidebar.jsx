@@ -3,9 +3,9 @@ import { cn } from "@/lib/utils";
 
 const items = [
     { key: "chat", icon: MessageSquare, label: "Chats" },
-    { key: "contacts", icon: Users, label: "Contacts" },
-    { key: "schedule", icon: Calendar, label: "Schedule" },
-    { key: "star", icon: Star, label: "Starred" },
+    // { key: "contacts", icon: Users, label: "Contacts" },
+    // { key: "schedule", icon: Calendar, label: "Schedule" },
+    // { key: "star", icon: Star, label: "Starred" },
 ];
 
 export function IconSidebar({ active, onSelect }) {

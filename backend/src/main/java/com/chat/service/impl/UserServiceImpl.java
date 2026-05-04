@@ -104,13 +104,7 @@ public class UserServiceImpl implements UserService {
 
     // ================= MAPPER =================
     private UserResponseDTO map(User u) {
-
-        boolean isOnline = false;
-
-        if (u.getLastSeen() != null &&
-                u.getLastSeen().isAfter(LocalDateTime.now().minusSeconds(30))) {
-            isOnline = true;
-        }
+        
 
         return UserResponseDTO.builder()
                 .id(u.getId())
@@ -119,7 +113,8 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(u.getPhoneNumber())
                 .profilePic(u.getProfilePic())
                 .about(u.getAbout())
-                .status(isOnline ? UserStatus.ONLINE : UserStatus.OFFLINE)
+                .lastSeen(u.getLastSeen())
+                .status(u.getStatus())
                 .build();
     }
 }

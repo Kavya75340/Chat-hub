@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { TopBar } from "./TopBar";
 import { IconSidebar } from "./IconSidebar";
 import { SlidePanel } from "./SlidePanel";
@@ -8,47 +8,25 @@ import { searchUsers } from "@/api/userApi";
 import { getMyGroups } from "@/api/groupApi";
 import { createChatRoom } from "@/api/chatApi";
 import GroupModal from "./GroupModal";
-import { connectStatusSocket } from "../service/socketService";
-// import { chats } from "@/components/chat/mockData";
+import { subscribeStatus } from "../service/socketService";
+import { SettingsPanel } from "./SettingPannel";
+import { UserProfilePanel } from "../chat/UserProfilePanel";
+import { NotificationPanel } from "./NotificationPanel";
 
 export function FloatingLayout() {
+    const [profileOpen, setProfileOpen] = useState(false);
     const [active, setActive] = useState("chat");
     const [panelOpen, setPanelOpen] = useState(true);
     const [chats, setChats] = useState([]);
     const [activeChat, setActiveChat] = useState(null);
     const [showGroupModal, setShowGroupModal] = useState(false);
+    const [notifOpen, setNotifOpen] = useState(false);
 
     const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
 
-    useEffect(() => {
-        const socket = connectStatusSocket((msg) => {
-            const [userId, status] = msg.split(":");
-
-            // 🔥 update chats list
-            setChats((prev) =>
-                prev.map((c) =>
-                    String(c.userId) === String(userId)
-                        ? { ...c, online: status === "ONLINE" }
-                        : c
-                )
-            );
-
-            // 🔥 update active chat ALSO (IMPORTANT FIX)
-            setActiveChat((prev) => {
-                if (prev && String(prev.receiverId) === String(userId)) {
-                    return { ...prev, online: status === "ONLINE" };
-                }
-                return prev;
-            });
-        });
-
-        return () => socket.deactivate();
-    }, []);
-
     // ================= LOAD CHATS =================
-    const loadChats = async () => {
+    const loadChats = useCallback(async () => {
         try {
-            // USERS
             const userRes = await searchUsers("");
             const userData = userRes.data.content || userRes.data;
 
@@ -62,14 +40,16 @@ export function FloatingLayout() {
                     online: u.status === "ONLINE",
                     type: "USER",
                     userId: u.id,
+                    lastSeen: u.lastSeen,
+                    about: u.about,
+                    email: u.email,
                     unread: 0,
                 }));
 
-            // GROUPS
             const groupRes = await getMyGroups();
             const groups = groupRes.data.map((g) => ({
                 id: "g_" + g.groupId,
-                chatId: "group_" + g.groupId, // ✅ safe id
+                chatId: g.chatId,
                 name: g.name,
                 initials: "GR",
                 online: false,
@@ -82,12 +62,35 @@ export function FloatingLayout() {
         } catch (err) {
             console.log(err);
         }
-    };
+    }, [currentUser.userId]);
 
-    // ================= INITIAL LOAD =================
+    // ================= SOCKET + INITIAL LOAD =================
     useEffect(() => {
+        const unsubscribe = subscribeStatus((msg) => {
+            console.log("STATUS EVENT:", msg);
+
+            const [userId, status] = msg?.split(":") || [];
+
+            setChats((prev) =>
+                prev.map((c) =>
+                    String(c.userId) === String(userId)
+                        ? { ...c, online: status === "ONLINE" }
+                        : c
+                )
+            );
+
+            setActiveChat((prev) => {
+                if (prev && String(prev.receiverId) === String(userId)) {
+                    return { ...prev, online: status === "ONLINE" };
+                }
+                return prev;
+            });
+        });
+
         loadChats();
-    }, []);
+
+        return () => unsubscribe();
+    }, [loadChats]);
 
     // ================= SIDEBAR =================
     function handleSelect(key) {
@@ -110,11 +113,9 @@ export function FloatingLayout() {
 
     // ================= SELECT CHAT =================
     const handleSelectChat = async (chat) => {
-        // USER CHAT
         if (chat.type === "USER") {
             let chatId = chat.chatId;
 
-            // create only once
             if (!chatId) {
                 const res = await createChatRoom({
                     senderId: currentUser.userId,
@@ -123,7 +124,6 @@ export function FloatingLayout() {
 
                 chatId = res.data.chatId;
 
-                // update chats state
                 setChats((prev) =>
                     prev.map((c) =>
                         c.userId === chat.userId ? { ...c, chatId } : c
@@ -136,30 +136,33 @@ export function FloatingLayout() {
                 receiverId: chat.userId,
                 name: chat.name,
                 online: chat.online,
+                about: chat.about,
+                email: chat.email,
+                lastSeen: chat.lastSeen,
                 isGroup: false,
             });
         }
 
-        // GROUP CHAT
         if (chat.type === "GROUP") {
             setActiveChat({
-                chatId: chat.chatId, // already prefixed
+                chatId: chat.chatId,
                 name: chat.name,
                 online: false,
                 isGroup: true,
             });
         }
 
-        // reset unread
         setChats((prev) =>
             prev.map((c) => (c.id === chat.id ? { ...c, unread: 0 } : c))
         );
     };
-
     return (
         <div className="relative z-10 flex min-h-screen w-full items-center justify-center">
             <div className="flex w-full max-w-full flex-col overflow-hidden rounded-3xl border border-border bg-card/80 shadow-floating backdrop-blur-xl h-screen">
-                <TopBar />
+                <TopBar
+                    onOpenProfile={() => setProfileOpen(true)}
+                    onOpenNotifications={() => setNotifOpen(true)}
+                />
                 <Divider />
 
                 <div className="flex flex-1 overflow-hidden">
@@ -174,10 +177,19 @@ export function FloatingLayout() {
                         onCreateGroup={() => setShowGroupModal(true)}
                     />
 
-                    <ChatContainer
-                        chat={activeChat}
-                        updateLastMessage={updateLastMessage}
-                    />
+                    {active === "chat" && (
+                        <ChatContainer
+                            chat={activeChat}
+                            updateLastMessage={updateLastMessage}
+                        />
+                    )}
+
+                    {active === "settings" && (
+                        <SettingsPanel
+                            onOpenProfile={() => setProfileOpen(true)}
+                            onOpenNotifications={() => setNotifOpen(true)}
+                        />
+                    )}
                     {showGroupModal && (
                         <GroupModal
                             users={chats.filter((c) => c.type === "USER")}
@@ -187,6 +199,16 @@ export function FloatingLayout() {
                     )}
                 </div>
             </div>
+            <UserProfilePanel
+                open={profileOpen}
+                user={currentUser}
+                isMe={true}
+                onClose={() => setProfileOpen(false)}
+            />
+            <NotificationPanel
+                open={notifOpen}
+                onClose={() => setNotifOpen(false)}
+            />
         </div>
     );
 }

@@ -1,11 +1,21 @@
-import { Phone, Video, Info } from "lucide-react";
+import { Info, Search, X } from "lucide-react";
 import { Avatar } from "@/components/ui/UserAvatar";
+import { useState } from "react";
 
-export function ChatHeader({ chat }) {
-    if (!chat) return null; // safety
+export function ChatHeader({ chat, onSearch, onOpenProfile }) {
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState("");
+
+    if (!chat) return null;
+
+    const handleSearch = (value) => {
+        setQuery(value);
+        onSearch(value);
+    };
 
     return (
-        <div className="flex items-center justify-between px-6 py-4">
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+            {/* LEFT */}
             <div className="flex items-center gap-3">
                 <Avatar
                     initials={chat?.name?.slice(0, 2) || "?"}
@@ -24,10 +34,36 @@ export function ChatHeader({ chat }) {
                 </div>
             </div>
 
-            <div className="flex items-center gap-4">
-                <Phone className="h-4 w-4" />
-                <Video className="h-4 w-4" />
-                <Info className="h-4 w-4" />
+            {/* RIGHT */}
+            <div className="flex items-center gap-2">
+                {open && (
+                    <input
+                        value={query}
+                        onChange={(e) => handleSearch(e.target.value)}
+                        placeholder="Search messages..."
+                        className="px-3 py-1.5 text-sm border rounded-lg outline-none"
+                    />
+                )}
+
+                <button
+                    onClick={() => {
+                        setOpen((v) => !v);
+                        if (open) {
+                            setQuery("");
+                            onSearch(""); // reset
+                        }
+                    }}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-hover-bg"
+                >
+                    {open ? <X size={16} /> : <Search size={16} />}
+                </button>
+
+                <button
+                    onClick={onOpenProfile}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-hover-bg"
+                >
+                    <Info size={16} />
+                </button>
             </div>
         </div>
     );

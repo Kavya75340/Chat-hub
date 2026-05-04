@@ -25,82 +25,75 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final CustomUserDetailsService userDetailsService;
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain
-    ) throws ServletException, IOException {
+protected void doFilterInternal(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        FilterChain filterChain
+) throws ServletException, IOException {
 
-        String path = request.getRequestURI();
+    String path = request.getRequestURI();
 
-        // 🔥 1. PUBLIC ROUTES SKIP
-        if (path.startsWith("/api/auth") ||
-            path.startsWith("/ws") ||
-            path.startsWith("/uploads") ||
-            path.startsWith("/error")) {
-
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String authHeader = request.getHeader("Authorization");
-
-        // 🔥 2. NO TOKEN → SKIP
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String token = authHeader.substring(7);
-        String phoneNumber = null;
-
-        // 🔥 3. EXTRACT TOKEN SAFE
-        try {
-            phoneNumber = jwtUtil.extractPhone(token);
-        } catch (Exception e) {
-            System.out.println("JWT PARSE ERROR: " + e.getMessage());
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        // 🔥 4. AUTH SET
-        if (phoneNumber != null &&
-            SecurityContextHolder.getContext().getAuthentication() == null) {
-
-            try {
-                UserDetails userDetails =
-                        userDetailsService.loadUserByUsername(phoneNumber);
-
-                // validate token
-                if (!jwtUtil.validateToken(token, userDetails.getUsername())) {
-                    filterChain.doFilter(request, response);
-                    return;
-                }
-
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request)
-                );
-
-                SecurityContextHolder
-                        .getContext()
-                        .setAuthentication(authToken);
-
-            } catch (Exception e) {
-                // 🔥 MOST IMPORTANT (NO CRASH)
-                System.out.println("JWT USER ERROR: " + e.getMessage());
-                filterChain.doFilter(request, response);
-                return;
-            }
-        }
+    // PUBLIC ROUTES
+    if (path.startsWith("/api/auth") ||
+        path.startsWith("/ws") ||
+        path.startsWith("/uploads") ||
+        path.startsWith("/error")) {
 
         filterChain.doFilter(request, response);
+        return;
     }
+
+    String authHeader = request.getHeader("Authorization");
+
+    // ❌ NO TOKEN → RETURN 401
+    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.getWriter().write("Missing token");
+        return;
+    }
+
+    String token = authHeader.substring(7);
+
+    String phoneNumber;
+
+    try {
+        phoneNumber = jwtUtil.extractPhone(token);
+    } catch (Exception e) {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.getWriter().write("Invalid token");
+        return;
+    }
+
+    try {
+        UserDetails userDetails =
+                userDetailsService.loadUserByUsername(phoneNumber);
+
+        if (!jwtUtil.validateToken(token, userDetails.getUsername())) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Token validation failed");
+            return;
+        }
+
+        UsernamePasswordAuthenticationToken authToken =
+                new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities()
+                );
+
+        authToken.setDetails(
+                new WebAuthenticationDetailsSource()
+                        .buildDetails(request)
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authToken);
+
+    } catch (Exception e) {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.getWriter().write("User not found");
+        return;
+    }
+
+    filterChain.doFilter(request, response);
+}
 }

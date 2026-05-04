@@ -1,50 +1,103 @@
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
-export const connectSocket = (chatId, onMessage) => {
+let stompClient = null;
 
-  const socket = new SockJS("http://localhost:8080/ws");
+// ================= BASE CONNECT =================
+export const connectSocketBase = () => {
+    if (stompClient && stompClient.active) {
+        return stompClient;
+    }
 
-  const client = new Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 5000, 
+    const token = localStorage.getItem("token");
 
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
+    stompClient = new Client({
+        webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
 
-      onConnect: () => {
-          client.subscribe(`/topic/messages/${chatId}`, (msg) => {
-              try {
-                  onMessage(JSON.parse(msg.body));
-              } catch {
-                  onMessage(msg.body);
-              }
-          });
-      },
-  });
+        reconnectDelay: 5000,
+        heartbeatIncoming: 4000,
+        heartbeatOutgoing: 4000,
 
-  client.activate();
+        connectHeaders: {
+            Authorization: `Bearer ${token}`, // 🔥 IMPORTANT
+        },
 
-  return client;
+        onConnect: () => {
+            console.log("✅ WebSocket Connected");
+        },
+
+        onStompError: (frame) => {
+            console.error("STOMP ERROR:", frame);
+        },
+
+        onWebSocketError: (err) => {
+            console.error("WS ERROR:", err);
+        },
+
+        onDisconnect: () => {
+            console.log("❌ WebSocket Disconnected");
+        },
+    });
+
+    stompClient.activate();
+    return stompClient;
 };
 
-export const connectStatusSocket = (onStatus) => {
-    const socket = new SockJS("http://localhost:8080/ws");
-  
-    const client = new Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 5000,
+// ================= CHAT SOCKET =================
+export const subscribeChat = (chatId, onMessage) => {
+  const client = connectSocketBase();
 
-  heartbeatIncoming: 4000,
-  heartbeatOutgoing: 4000,
-  
-      onConnect: () => {
-        client.subscribe("/topic/status", (msg) => {
-          onStatus(msg.body);
-        });
-      },
-    });
-  
-    client.activate();
-    return client;
+  let subscription = null;
+
+  const waitForConnect = setInterval(() => {
+      if (client.connected) {
+          clearInterval(waitForConnect);
+
+          subscription = client.subscribe(
+              `/topic/messages/${chatId}`,
+              (msg) => {
+                  try {
+                      onMessage(JSON.parse(msg.body));
+                  } catch {
+                      onMessage(msg.body);
+                  }
+              }
+          );
+      }
+  }, 100);
+
+  return () => {
+      clearInterval(waitForConnect);
+      if (subscription) subscription.unsubscribe();
   };
+};
+
+// ================= STATUS SOCKET =================
+export const subscribeStatus = (onStatus) => {
+  const client = connectSocketBase();
+
+  let subscription = null;
+
+  const waitForConnect = setInterval(() => {
+      if (client.connected) {
+          clearInterval(waitForConnect);
+
+          subscription = client.subscribe("/topic/status", (msg) => {
+              onStatus((msg.body));
+          });
+      }
+  }, 100);
+
+  return () => {
+      clearInterval(waitForConnect);
+      if (subscription) subscription.unsubscribe();
+  };
+};
+
+// ================= DISCONNECT =================
+export const disconnectSocket = () => {
+    if (stompClient) {
+        stompClient.deactivate();
+        stompClient = null;
+    }
+};

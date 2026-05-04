@@ -23,3 +23,6 @@ export const deleteMessage = (id) =>
 // edit
 export const editMessage = (id, data) =>
   API.put(`/message/${id}`, data);
+
+export const getScheduledMessages = (chatId) =>
+  API.get(`/message/scheduled/${chatId}`);

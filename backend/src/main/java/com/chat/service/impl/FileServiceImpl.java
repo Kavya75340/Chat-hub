@@ -1,6 +1,7 @@
 package com.chat.service.impl;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -66,7 +67,8 @@ public class FileServiceImpl implements FileService {
                 .fileType(fileType)
                 .fileUrl("/uploads/" + fileName)
                 .chatId(chatId)
-                .senderId(user.getId()) // ✅ FIXED
+                .senderId(user.getId()) 
+                .createdAt(LocalDateTime.now())
                 .build();
 
         Attachment saved = attachmentRepository.save(attachment);
@@ -131,6 +133,8 @@ public class FileServiceImpl implements FileService {
                 .chatId(a.getChatId())
 
                 .senderId(a.getSenderId())
+
+                .createdAt(a.getCreatedAt()) 
 
                 .build();
     }

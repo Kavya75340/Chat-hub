@@ -102,7 +102,7 @@ export function MessageBubble({ message }) {
                     {onMe &&
                         !isScheduled &&
                         (message.status === "SEEN" ? (
-                            <CheckCheck className="h-3 w-3 text-foreground/60" />
+                            <CheckCheck className="h-3 w-3 text-blue-500" />
                         ) : message.status === "DELIVERED" ? (
                             <CheckCheck className="h-3 w-3" />
                         ) : (

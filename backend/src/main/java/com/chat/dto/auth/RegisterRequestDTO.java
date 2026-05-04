@@ -1,6 +1,10 @@
 package com.chat.dto.auth;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
 @Setter
@@ -13,5 +17,6 @@ public class RegisterRequestDTO {
     private String phoneNumber;
     private String email;
     private String password;
+    private String about;
 
 }

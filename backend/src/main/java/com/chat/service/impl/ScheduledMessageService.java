@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.chat.dto.message.MessageResponseDTO;
 import com.chat.entity.Message;
 import com.chat.enums.MessageStatus;
+import com.chat.enums.UserStatus;
 import com.chat.repository.MessageRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -29,8 +30,15 @@ public class ScheduledMessageService {
 
         for(Message m : pending){
 
+            MessageStatus status = MessageStatus.SENT;
+
+            if (m.getReceiver() != null &&
+                m.getReceiver().getStatus() == UserStatus.ONLINE) {
+                status = MessageStatus.DELIVERED;
+            }
+            
             m.setScheduled(false);
-            m.setStatus(MessageStatus.SENT);
+            m.setStatus(status);
 
             Message saved = messageRepository.save(m);
 
@@ -53,4 +61,5 @@ public class ScheduledMessageService {
             );
         }
     }
+
 }

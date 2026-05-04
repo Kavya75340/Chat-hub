@@ -1,5 +1,7 @@
 package com.chat.entity;
 
+import java.time.LocalDateTime;
+
 import com.chat.enums.FileType;
 
 import jakarta.persistence.Entity;
@@ -33,5 +35,6 @@ public class Attachment {
     private String fileUrl;
     private String chatId;
     private Long senderId;
+    private LocalDateTime createdAt;
 
 }

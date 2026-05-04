@@ -11,7 +11,7 @@ export function MessageActions({ onMe, message, onDelete, onEdit }) {
             <button
                 onClick={() => navigator.clipboard.writeText(message.content)}
                 title="Copy"
-                className="h-6 w-6 flex items-center justify-center hover:bg-gray-200"
+                className="h-6 w-6 flex items-center justify-center hover:bg-gray-200 rounded-sm"
             >
                 <Copy className="h-3 w-3" />
             </button>
@@ -21,7 +21,7 @@ export function MessageActions({ onMe, message, onDelete, onEdit }) {
                 <button
                     onClick={() => onEdit(message)}
                     title="Edit"
-                    className="h-6 w-6 flex items-center justify-center hover:bg-gray-200"
+                    className="h-6 w-6 flex items-center justify-center hover:bg-gray-200 rounded-sm"
                 >
                     <Pencil className="h-3 w-3" />
                 </button>
@@ -32,7 +32,7 @@ export function MessageActions({ onMe, message, onDelete, onEdit }) {
                 <button
                     onClick={() => onDelete(message.id)}
                     title="Delete"
-                    className="h-6 w-6 flex items-center justify-center hover:bg-red-200"
+                    className="h-6 w-6 flex items-center justify-center hover:bg-red-200 rounded-sm"
                 >
                     <Trash2 className="h-3 w-3" />
                 </button>

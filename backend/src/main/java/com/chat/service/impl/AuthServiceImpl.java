@@ -46,22 +46,13 @@ public class AuthServiceImpl implements AuthService {
         }
 
         User user = User.builder()
-
-                .name(dto.getName())
-
-                .phoneNumber(dto.getPhoneNumber())
-
-                .email(dto.getEmail())
-
-                .password(
-                        passwordEncoder.encode(
-                                dto.getPassword()
-                        )
-                )
-
-                .status(UserStatus.OFFLINE)
-
-                .build();
+        .name(dto.getName())
+        .phoneNumber(dto.getPhoneNumber())
+        .email(dto.getEmail())
+        .password(passwordEncoder.encode(dto.getPassword()))
+        .status(UserStatus.OFFLINE)
+        .about(dto.getAbout()) // या default
+        .build();
 
         User savedUser = userRepository.save(user);
 
@@ -71,18 +62,14 @@ public class AuthServiceImpl implements AuthService {
         );
 
         return AuthResponseDTO.builder()
-
-                .userId(savedUser.getId())
-
-                .name(savedUser.getName())
-
-                .phoneNumber(savedUser.getPhoneNumber())
-
-                .status(savedUser.getStatus())
-
-                .token(token)
-
-                .build();
+        .userId(savedUser.getId())
+        .name(savedUser.getName())
+        .phoneNumber(savedUser.getPhoneNumber())
+        .status(savedUser.getStatus())
+        .email(savedUser.getEmail())
+        .about(savedUser.getAbout())
+        .token(token)
+        .build();
     }
 
     @Override
@@ -118,17 +105,13 @@ public class AuthServiceImpl implements AuthService {
         );
 
         return AuthResponseDTO.builder()
-
-                .userId(user.getId())
-
-                .name(user.getName())
-
-                .phoneNumber(user.getPhoneNumber())
-
-                .status(user.getStatus())
-
-                .token(token)
-
-                .build();
+        .userId(user.getId())
+        .name(user.getName())
+        .phoneNumber(user.getPhoneNumber())
+        .email(user.getEmail())
+        .status(user.getStatus())
+        .about(user.getAbout())
+        .token(token)
+        .build();
     }
 }

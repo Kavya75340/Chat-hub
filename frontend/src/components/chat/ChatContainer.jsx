@@ -12,136 +12,219 @@ import {
     markDelivered,
 } from "@/api/messageApi";
 import { createNotification } from "@/api/notificationApi";
-import { connectSocket } from "@/components/service/socketService";
+import { getFiles } from "@/api/fileApi";
+import { FilePreview } from "../file/FilePreview";
+import { getAISuggestions } from "@/api/aiApi";
+import { subscribeChat } from "@/components/service/socketService";
+import { getScheduledMessages } from "@/api/messageApi";
+import { UserProfilePanel } from "./UserProfilePanel";
 
 export function ChatContainer({ chat, updateLastMessage }) {
-    const [messages, setMessages] = useState([]);
+    const [tone, setTone] = useState("Professional");
+    const [aiSuggestions, setAiSuggestions] = useState(null);
+    const [chatItems, setChatItems] = useState([]);
     const [draft, setDraft] = useState("");
     const [scheduleOpen, setScheduleOpen] = useState(false);
+    const [allItems, setAllItems] = useState([]);
 
+    const deliveredRef = useRef(null);
     const scrollRef = useRef(null);
-    const socketRef = useRef(null);
+    const lastNotificationTime = useRef(0);
+    const lastSeenRef = useRef(null);
+    const [profileOpen, setProfileOpen] = useState(false);
 
     const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-
-    // ================= LOAD MESSAGES =================
+    //============ai====================
     useEffect(() => {
         if (!chat?.chatId) return;
 
-        const loadMessages = async () => {
+        const delay = setTimeout(async () => {
+            // ✅ FILE skip
+            const lastTextMessage = [...chatItems]
+                .reverse()
+                .find((m) => m.type === "TEXT" && m.content);
+
+            const lastMessage = lastTextMessage?.content || "";
+
+            // ✅ empty avoid
+            if (!lastMessage && !draft) return;
+
+            const res = await getAISuggestions({
+                message: lastMessage,
+                draft: draft || "",
+                tone: tone || "Professional",
+            });
+
+            // ✅ SAFE SET
+            if (res && !res.error) {
+                setAiSuggestions(res);
+            } else {
+                setAiSuggestions(null);
+            }
+        }, 500);
+
+        return () => clearTimeout(delay);
+    }, [draft, tone, chatItems]);
+
+    // ================= LOAD =================
+    useEffect(() => {
+        if (!chat?.chatId) return;
+
+        const loadData = async () => {
             try {
-                const res = await getMessages(chat.chatId);
-                const data = res.data || [];
+                const [msgRes, fileRes, schedRes] = await Promise.all([
+                    getMessages(chat.chatId),
+                    getFiles(chat.chatId),
+                    getScheduledMessages(chat.chatId),
+                ]);
 
-                setMessages(data);
+                const messages = msgRes.data || [];
 
-                if (data.length > 0) {
-                    const last = data[data.length - 1];
-                    updateLastMessage(chat.chatId, last.content);
-                }
+                const files = (fileRes.data || []).map((f) => ({
+                    id: "file-" + f.id,
+                    chatId: f.chatId,
+                    senderId: f.senderId,
+                    type: "FILE",
+                    fileName: f.fileName,
+                    fileType: f.fileType,
+                    fileUrl: f.fileUrl,
+                    timestamp: f.createdAt,
+                }));
+
+                const scheduled = schedRes.data || [];
+
+                const getTime = (m) =>
+                    m.scheduled
+                        ? new Date(m.scheduledTime)
+                        : new Date(m.timestamp);
+
+                const merged = [...messages, ...files, ...scheduled].sort(
+                    (a, b) => getTime(a) - getTime(b)
+                );
+                setChatItems(merged);
+                setAllItems(merged);
             } catch (err) {
                 console.log("load error:", err);
             }
         };
 
-        loadMessages();
+        loadData();
     }, [chat?.chatId]);
+
+    // ================= SEARCH =================
+    const handleSearch = (query) => {
+        if (!query.trim()) {
+            setChatItems(allItems); // reset
+            return;
+        }
+
+        const filtered = allItems.filter((item) => {
+            if (item.type === "FILE") return false;
+
+            return item.content?.toLowerCase().includes(query.toLowerCase());
+        });
+
+        setChatItems(filtered);
+    };
 
     // ================= AUTO SCROLL =================
     useEffect(() => {
         if (!scrollRef.current) return;
         scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }, [messages]);
+    }, [chatItems]);
 
     // ================= DELIVERED =================
     useEffect(() => {
-        if (!chat?.chatId) return;
+        if (!chat?.chatId || chat?.isGroup) return;
 
-        markDelivered(chat.chatId); // only once when chat changes
+        if (deliveredRef.current === chat.chatId) return;
+
+        deliveredRef.current = chat.chatId;
+        markDelivered(chat.chatId);
     }, [chat?.chatId]);
 
-    // ================= SEEN (debounced) =================
+    // ================= SEEN =================
     useEffect(() => {
-        if (!chat?.chatId) return;
+        if (!chat?.chatId || chat?.isGroup) return;
 
-        if (messages.length > 0) {
-            markSeen(chat.chatId);
+        const lastMsg = chatItems[chatItems.length - 1];
+
+        if (
+            lastMsg &&
+            lastMsg.senderId !== currentUser.userId &&
+            lastMsg.status !== "SEEN" &&
+            lastSeenRef.current !== lastMsg.id
+        ) {
+            lastSeenRef.current = lastMsg.id;
+
+            const timer = setTimeout(() => {
+                markSeen(chat.chatId);
+            }, 300);
+
+            return () => clearTimeout(timer);
         }
-    }, [chat?.chatId]);
+    }, [chatItems, chat?.chatId]);
 
     // ================= SOCKET =================
     useEffect(() => {
         if (!chat?.chatId) return;
 
-        // cleanup previous socket
-        if (socketRef.current) {
-            socketRef.current.deactivate();
-        }
-
-        socketRef.current = connectSocket(chat.chatId, (msg) => {
-            // DELETE MESSAGE
+        const unsubscribe = subscribeChat(chat.chatId, (msg) => {
+            // ✅ DELETE FIX
             if (typeof msg === "string" && msg.startsWith("DELETE:")) {
                 const id = msg.split(":")[1];
 
-                setMessages((prev) =>
+                setChatItems((prev) =>
                     prev.filter((m) => String(m.id) !== String(id))
                 );
+
                 return;
             }
 
-            // wrong chat ignore
             if (String(msg.chatId) !== String(chat.chatId)) return;
 
-            // 🔥 INSTANT SEEN (IMPORTANT)
-            if (msg.senderId !== currentUser.userId) {
-                markSeen(chat.chatId);
-            }
-
-            // update sidebar last message
-            if (msg.content) {
+            if (msg.content && !msg.scheduled) {
                 updateLastMessage(chat.chatId, msg.content);
             }
 
-            setMessages((prev) => {
-                // temp remove (optional but recommended)
-                const cleaned = prev.filter((m) => !m.isTemp);
+            // ✅ UNIVERSAL REPLACE (no duplicate)
+            setChatItems((prev) => {
+                let updated = prev.filter((m) => m.id !== msg.id);
+                updated.push(msg);
 
-                const exists = cleaned.some((m) => m.id === msg.id);
-
-                if (exists) {
-                    return cleaned.map((m) => (m.id === msg.id ? msg : m));
-                }
-
-                return [...cleaned, msg];
+                return updated.sort(
+                    (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+                );
             });
         });
 
-        return () => {
-            socketRef.current?.deactivate();
-        };
+        return () => unsubscribe();
     }, [chat?.chatId]);
 
-    // ================= SEND MESSAGE =================
+    // ================= SEND =================
     const handleSend = async () => {
         if (!draft.trim() || !chat?.chatId) return;
 
-        // 1. Optimistic Update: Pehle UI mein message dikhao
         const tempMsg = {
             id: "temp-" + Date.now(),
-            isTemp: true, // Flag to identify this is not from DB yet
+            isTemp: true,
             chatId: chat.chatId,
             senderId: currentUser.userId,
             content: draft,
-            status: "SENDING", // Change status to sending
+            type: "TEXT",
             timestamp: new Date().toISOString(),
         };
 
-        setMessages((prev) => [...prev, tempMsg]);
-        const currentDraft = draft; // Store draft to clear it early
+        setChatItems((prev) =>
+            [...prev, tempMsg].sort(
+                (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+            )
+        );
+
+        const currentDraft = draft;
         setDraft("");
 
         try {
-            // 2. API Call to Backend
             await sendMessage({
                 chatId: chat.chatId,
                 receiverId: chat.isGroup ? null : chat.receiverId,
@@ -150,26 +233,28 @@ export function ChatContainer({ chat, updateLastMessage }) {
                 scheduled: false,
             });
 
-            // Notifications (Optional)
-            if (!chat.isGroup) {
+            const now = Date.now();
+
+            if (!chat.isGroup && now - lastNotificationTime.current > 800) {
+                lastNotificationTime.current = now;
+
                 await createNotification({
-                    userId: chat.receiverId,
+                    receiverId: chat.receiverId,
                     message: currentDraft,
                 });
             }
         } catch (err) {
             console.log("send error:", err);
-            // Error handling: Remove temp message if send fails
-            setMessages((prev) => prev.filter((m) => m.id !== tempMsg.id));
-            setDraft(currentDraft); // Give text back to user
+
+            setChatItems((prev) => prev.filter((m) => m.id !== tempMsg.id));
+
+            setDraft(currentDraft);
         }
     };
 
     // ================= SCHEDULE =================
-    const handleScheduleSend = async (date, time) => {
-        if (!draft.trim()) return;
-
-        const scheduledTime = new Date(`${date}T${time}`);
+    const handleScheduledSend = async (scheduledTime) => {
+        if (!draft.trim() || !chat?.chatId) return;
 
         try {
             await sendMessage({
@@ -178,31 +263,94 @@ export function ChatContainer({ chat, updateLastMessage }) {
                 content: draft,
                 messageType: "TEXT",
                 scheduled: true,
-                scheduledTime,
+                scheduledTime: scheduledTime
+                    .toLocaleString("sv-SE")
+                    .replace(" ", "T"), // ✅ FIXED
             });
+
+            // ✅ temp scheduled UI
+            const tempScheduled = {
+                id: "temp-schedule-" + Date.now(),
+                chatId: chat.chatId,
+                senderId: currentUser.userId,
+                content: draft,
+                type: "TEXT",
+                scheduled: true,
+                timestamp: scheduledTime.toISOString(),
+            };
+
+            setChatItems((prev) =>
+                [...prev, tempScheduled].sort(
+                    (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+                )
+            );
 
             setDraft("");
             setScheduleOpen(false);
         } catch (err) {
-            console.log(err);
+            console.log("❌ schedule error:", err);
         }
     };
 
     // ================= UI =================
     return (
         <div className="flex h-full flex-1 flex-col bg-card">
-            <ChatHeader chat={chat} />
+            <ChatHeader
+                chat={chat}
+                onSearch={handleSearch}
+                onOpenProfile={() => setProfileOpen(true)}
+            />
 
             <Divider />
 
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
-                {messages.map((m) => (
-                    <MessageBubble key={m.id} message={m} />
-                ))}
+                {chatItems.map((item) => {
+                    if (
+                        item.scheduled &&
+                        item.senderId !== currentUser.userId
+                    ) {
+                        return null;
+                    }
+                    // 🔥 FILE
+                    if (item.type === "FILE") {
+                        const isMe = item.senderId === currentUser.userId;
+
+                        return (
+                            <div
+                                key={item.id}
+                                className={`flex w-full mb-2 ${
+                                    isMe ? "justify-end" : "justify-start"
+                                }`}
+                            >
+                                <FilePreview
+                                    kind={
+                                        item.fileType === "IMAGE"
+                                            ? "image"
+                                            : item.fileType === "VIDEO"
+                                            ? "video"
+                                            : item.fileType === "PDF"
+                                            ? "pdf"
+                                            : "file"
+                                    }
+                                    name={item.fileName}
+                                    url={item.fileUrl}
+                                    onMe={isMe}
+                                    createdAt={item.timestamp}
+                                />
+                            </div>
+                        );
+                    }
+
+                    // 🔥 TEXT MESSAGE
+                    return <MessageBubble key={item.id} message={item} />;
+                })}
             </div>
 
             <div className="border-t p-3">
-                <AISuggestions onPick={(t) => setDraft(t)} />
+                <AISuggestions
+                    suggestions={aiSuggestions}
+                    onPick={(text) => setDraft(text)}
+                />
 
                 <MessageInput
                     value={draft}
@@ -211,6 +359,8 @@ export function ChatContainer({ chat, updateLastMessage }) {
                     onOpenSchedule={() => setScheduleOpen(true)}
                     chat={chat}
                     currentUser={currentUser}
+                    tone={tone}
+                    setTone={setTone}
                 />
             </div>
 
@@ -218,7 +368,30 @@ export function ChatContainer({ chat, updateLastMessage }) {
                 open={scheduleOpen}
                 preview={draft}
                 onClose={() => setScheduleOpen(false)}
-                onConfirm={handleScheduleSend}
+                onConfirm={(date, time) => {
+                    if (!date || !time) return;
+
+                    const [hours, minutes] = time.split(":");
+
+                    const scheduledTime = new Date(date);
+                    scheduledTime.setHours(parseInt(hours));
+                    scheduledTime.setMinutes(parseInt(minutes));
+                    scheduledTime.setSeconds(0);
+                    scheduledTime.setMilliseconds(0);
+
+                    handleScheduledSend(scheduledTime);
+                }}
+            />
+            <UserProfilePanel
+                open={profileOpen}
+                user={{
+                    name: chat?.name,
+                    online: chat?.online,
+                    lastSeen: chat?.lastSeen,
+                    about: chat?.about || "",
+                }}
+                isMe={false}
+                onClose={() => setProfileOpen(false)}
             />
         </div>
     );

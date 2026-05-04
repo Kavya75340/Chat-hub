@@ -1,55 +1,139 @@
-import {
-    FileText,
-    Download,
-    Image as ImageIcon,
-    Video,
-    File,
-} from "lucide-react";
-
+import { FileText, Download, Video, File } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function FilePreview({ kind, name, size, onMe }) {
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+export function FilePreview({ kind, name, size, onMe, url, createdAt }) {
+    const fileUrl = `${BASE_URL}${url}`;
+    const formatTime = (date) => {
+        if (!date) return "";
+
+        return new Date(date).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    const containerStyle = onMe
+        ? "bg-foreground text-background border-foreground/10"
+        : "bg-secondary text-foreground border-border";
+
+    const overlayStyle = onMe
+        ? "bg-black/30 text-white"
+        : "bg-black/40 text-white";
+
+    // ================= IMAGE =================
     if (kind === "image") {
         return (
-            <div className="overflow-hidden rounded-xl border border-border bg-secondary">
-                <div className="relative h-48 w-72 bg-gradient-to-br from-secondary via-card to-accent">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <ImageIcon
-                            className="h-8 w-8 text-muted-2"
-                            strokeWidth={1.25}
-                        />
-                    </div>
+            <div
+                className={cn(
+                    "overflow-hidden rounded-xl border w-72",
+                    containerStyle
+                )}
+            >
+                <img
+                    src={fileUrl}
+                    alt={name}
+                    className="h-48 w-full object-cover"
+                    onError={(e) => (e.target.src = "/fallback.png")}
+                />
 
-                    <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-gradient-to-t from-black/40 to-transparent px-3 py-2">
-                        <span className="truncate text-[11px] font-medium text-white">
-                            {name}
-                        </span>
+                <div
+                    className={cn(
+                        "flex justify-between px-3 py-2 text-xs",
+                        overlayStyle
+                    )}
+                >
+                    <span className="truncate">{name}</span>
 
-                        <button className="rounded-md p-1 text-white/90 hover:bg-white/10">
-                            <Download className="h-3.5 w-3.5" />
-                        </button>
+                    <div className="flex items-center gap-2">
+                        <span>{formatTime(createdAt)}</span>
+
+                        <a href={fileUrl} download target="_blank">
+                            <Download className="h-4 w-4" />
+                        </a>
                     </div>
                 </div>
             </div>
         );
     }
 
-    const Icon = kind === "pdf" ? FileText : kind === "video" ? Video : File;
+    // ================= VIDEO =================
+    if (kind === "video") {
+        return (
+            <div
+                className={cn(
+                    "w-72 rounded-xl border overflow-hidden",
+                    containerStyle
+                )}
+            >
+                <video
+                    src={fileUrl}
+                    controls
+                    className="w-full h-48 object-cover"
+                />
+
+                <div
+                    className={cn(
+                        "flex justify-between px-3 py-2 text-xs",
+                        overlayStyle
+                    )}
+                >
+                    <span className="truncate">{name}</span>
+
+                    <div className="flex items-center gap-2">
+                        <span>{formatTime(createdAt)}</span>
+
+                        <a href={fileUrl} download target="_blank">
+                            <Download className="h-4 w-4" />
+                        </a>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ================= PDF =================
+    if (kind === "pdf") {
+        return (
+            <div
+                className={cn(
+                    "w-72 border rounded-xl overflow-hidden",
+                    containerStyle
+                )}
+            >
+                <iframe src={fileUrl} className="h-48 w-full" loading="lazy" />
+
+                <div className="flex justify-between px-3 py-2 text-xs">
+                    <span className="truncate">{name}</span>
+
+                    <div className="flex items-center gap-2">
+                        <span>{formatTime(createdAt)}</span>
+
+                        <a href={fileUrl} target="_blank">
+                            Open
+                        </a>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // ================= OTHER FILE =================
+    const Icon = kind === "doc" || kind === "docx" ? FileText : File;
 
     return (
         <div
             className={cn(
                 "flex w-72 items-center gap-3 rounded-xl border p-3",
-
-                onMe ? "border-white/10 bg-white/5" : "border-border bg-card"
+                containerStyle
             )}
         >
             <div
                 className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-lg",
-
                     onMe
-                        ? "bg-white/10 text-white"
+                        ? "bg-background/10 text-background"
                         : "bg-secondary text-foreground"
                 )}
             >
@@ -57,39 +141,26 @@ export function FilePreview({ kind, name, size, onMe }) {
             </div>
 
             <div className="min-w-0 flex-1">
-                <div
-                    className={cn(
-                        "truncate text-[13px] font-medium",
+                <div className="truncate text-[13px] font-medium">{name}</div>
 
-                        onMe ? "text-white" : "text-foreground"
-                    )}
-                >
-                    {name}
-                </div>
-
-                <div
-                    className={cn(
-                        "text-[11px]",
-
-                        onMe ? "text-white/60" : "text-muted-foreground"
-                    )}
-                >
+                <div className="text-[11px] opacity-70">
                     {kind.toUpperCase()}
                     {size ? ` · ${size}` : ""}
+                    {createdAt ? ` · ${formatTime(createdAt)}` : ""}
                 </div>
             </div>
 
-            <button
+            <a
+                href={fileUrl}
+                download
+                target="_blank"
                 className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-
-                    onMe
-                        ? "text-white/80 hover:bg-white/10"
-                        : "text-muted-foreground hover:bg-hover-bg hover:text-foreground"
+                    "flex h-8 w-8 items-center justify-center rounded-lg transition",
+                    onMe ? "hover:bg-background/20" : "hover:bg-hover-bg"
                 )}
             >
                 <Download className="h-4 w-4" />
-            </button>
+            </a>
         </div>
     );
 }

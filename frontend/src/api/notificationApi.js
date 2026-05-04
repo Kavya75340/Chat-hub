@@ -6,7 +6,7 @@ export const createNotification = (data) =>
 
 // get notifications
 export const getUserNotifications = () =>
-  API.get(`/notification}`);
+  API.get("/notification"); // ✅ FIXED
 
 // mark seen
 export const markAsSeen = (id) =>
@@ -14,4 +14,4 @@ export const markAsSeen = (id) =>
 
 // unread count
 export const getUnreadCount = () =>
-  API.get(`/notification/unread`);
+  API.get("/notification/unread");
