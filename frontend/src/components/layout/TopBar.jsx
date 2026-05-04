@@ -30,7 +30,7 @@ export function TopBar({ onOpenProfile, onOpenNotifications }) {
                         </span>
                     </div>
                     <span className="text-[8px] font-bold uppercase tracking-[0.1em] text-muted-foreground/70 -mt-0.5">
-                        smarter chat. better connections.
+                        Powered by Kavya, Sneha & Taijash
                     </span>
                 </div>
             </div>
