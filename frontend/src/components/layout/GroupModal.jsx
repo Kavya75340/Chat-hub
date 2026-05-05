@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createGroup } from "@/api/groupApi";
 import { X, Users, CheckCircle2, UserPlus } from "lucide-react"; // Icons add kiye hain
 
-export default function GroupModal({ users, close, reload }) {
+export default function GroupModal({ users, close, onGroupCreated }) {
     const [name, setName] = useState("");
     const [selected, setSelected] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -20,12 +20,15 @@ export default function GroupModal({ users, close, reload }) {
 
         try {
             setLoading(true);
-            await createGroup({
+
+            const res = await createGroup({
                 name,
                 description: "Premium Group Chat",
                 members: selected,
             });
-            reload();
+
+            onGroupCreated(res.data);
+
             close();
         } catch (err) {
             console.error("Group create error:", err);

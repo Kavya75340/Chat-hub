@@ -53,7 +53,7 @@ export function SettingsPanel({ onOpenProfile, onOpenNotifications }) {
                     onClick={onOpenNotifications}
                     className="flex items-center justify-between p-3 rounded-lg hover:bg-hover-bg cursor-pointer"
                 >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 mr-2">
                         <Bell className="h-4 w-4" />
                         <span>Notifications</span>
                     </div>

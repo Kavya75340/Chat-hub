@@ -22,6 +22,7 @@ export function MessageInput({
     chat,
     tone,
     setTone,
+    refreshChat,
 }) {
     const [toneOpen, setToneOpen] = useState(false);
     const [showEmoji, setShowEmoji] = useState(false);
@@ -55,7 +56,6 @@ export function MessageInput({
                 <span className="text-[11px] font-medium text-muted-foreground">
                     Tone
                 </span>
-
                 <div className="relative">
                     <button
                         onClick={() => setToneOpen((o) => !o)}
@@ -107,7 +107,7 @@ export function MessageInput({
 
                             try {
                                 await uploadFile(file, chat.chatId);
-                                window.location.reload();
+                                refreshChat();
                             } catch (err) {
                                 console.log(err);
                             }

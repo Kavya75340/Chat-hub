@@ -79,8 +79,7 @@ export function SlidePanel({
             {/* Chat List */}
             <div className="flex-1 overflow-y-auto px-2 pb-3">
                 {filteredChats.map((c) => {
-                    // ✅ FIXED ACTIVE CHECK
-                    const isActive = c.chatId === activeChatId;
+                    const isActive = String(c.chatId) === String(activeChatId);
 
                     return (
                         <button

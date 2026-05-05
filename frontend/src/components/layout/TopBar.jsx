@@ -2,23 +2,18 @@ import { MoreHorizontal, Sparkles, Bell } from "lucide-react";
 import { Avatar } from "@/components/ui/UserAvatar";
 import { useEffect, useState } from "react";
 import { getUnreadCount } from "../../api/notificationApi";
-
 export function TopBar({ onOpenProfile, onOpenNotifications }) {
     const [count, setCount] = useState(0);
     const user = JSON.parse(localStorage.getItem("user"));
-
     useEffect(() => {
         getUnreadCount().then((res) => setCount(res.data));
     }, []);
-
     return (
         <div className="flex items-center justify-between px-5 py-3.5">
             {/* LEFT */}
             <div className="flex items-center gap-3">
                 {/* Icon Container */}
-
                 <img src="/logo.png" alt="" className="h-10 w-10" />
-
                 {/* Text Container */}
                 <div className="flex flex-col justify-center leading-tight">
                     <div className="flex items-baseline gap-1">
@@ -34,10 +29,9 @@ export function TopBar({ onOpenProfile, onOpenNotifications }) {
                     </span>
                 </div>
             </div>
-
             {/* RIGHT */}
             <div className="flex items-center gap-2">
-                {/* 🔔 NOTIFICATION BUTTON */}
+                {/*  NOTIFICATION BUTTON */}
                 <button
                     onClick={onOpenNotifications}
                     className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-hover-bg"
@@ -49,7 +43,6 @@ export function TopBar({ onOpenProfile, onOpenNotifications }) {
                         </span>
                     )}
                 </button>
-
                 {/* PROFILE */}
                 <div onClick={onOpenProfile} className="cursor-pointer">
                     <Avatar

@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { FloatingLayout } from "./components/layout/FloatingLayout";
-// import ProtectedRoute from "./routes/ProtectedRoute";
 
 export default function App() {
     return (
@@ -14,14 +13,7 @@ export default function App() {
             <Route path="/register" element={<Register />} />
 
             {/* PROTECTED CHAT */}
-            <Route
-                path="/chat"
-                element={
-                    // <ProtectedRoute>
-                    <FloatingLayout />
-                    // </ProtectedRoute>
-                }
-            />
+            <Route path="/chat" element={<FloatingLayout />} />
         </Routes>
     );
 }

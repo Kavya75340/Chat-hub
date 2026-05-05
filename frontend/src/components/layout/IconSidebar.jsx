@@ -1,13 +1,6 @@
 import { MessageSquare, Users, Calendar, Star, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const items = [
-    { key: "chat", icon: MessageSquare, label: "Chats" },
-    // { key: "contacts", icon: Users, label: "Contacts" },
-    // { key: "schedule", icon: Calendar, label: "Schedule" },
-    // { key: "star", icon: Star, label: "Starred" },
-];
-
+const items = [{ key: "chat", icon: MessageSquare, label: "Chats" }];
 export function IconSidebar({ active, onSelect }) {
     return (
         <div className="flex h-full w-[60px] flex-col items-center justify-between border-r border-divider bg-sidebar-bg py-4">
@@ -15,7 +8,6 @@ export function IconSidebar({ active, onSelect }) {
                 {items.map((item) => {
                     const Icon = item.icon;
                     const isActive = active === item.key;
-
                     return (
                         <button
                             key={item.key}
@@ -32,7 +24,6 @@ export function IconSidebar({ active, onSelect }) {
                                 className="h-[18px] w-[18px]"
                                 strokeWidth={isActive ? 2.25 : 1.75}
                             />
-
                             {isActive && (
                                 <span className="absolute -left-[7px] top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-foreground" />
                             )}
@@ -40,7 +31,6 @@ export function IconSidebar({ active, onSelect }) {
                     );
                 })}
             </div>
-
             <button
                 onClick={() => onSelect("settings")}
                 title="Settings"

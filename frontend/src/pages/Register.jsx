@@ -19,7 +19,6 @@ export default function Register() {
         const { name, value } = e.target;
 
         if (name === "phoneNumber") {
-            // Sirf digits (0-9) allow karo aur 10 se zyada characters nahi
             const onlyNums = value.replace(/[^0-9]/g, "");
             if (onlyNums.length <= 10) {
                 setForm({ ...form, [name]: onlyNums });
@@ -28,18 +27,15 @@ export default function Register() {
             setForm({ ...form, [name]: value });
         }
 
-        // Typing karte waqt error message clear karna
         if (error) setError("");
     };
 
     const validateForm = () => {
-        // Phone Number Validation (Exactly 10 Digits)
         if (form.phoneNumber.length !== 10) {
             setError("Phone number must be exactly 10 digits.");
             return false;
         }
 
-        // Strong Password Validation (8+ chars, Uppercase, Number, Special Char)
         const passwordRegex =
             /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
         if (!passwordRegex.test(form.password)) {

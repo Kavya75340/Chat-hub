@@ -25,6 +25,7 @@ export function ChatContainer({ chat, updateLastMessage }) {
     const [chatItems, setChatItems] = useState([]);
     const [draft, setDraft] = useState("");
     const [scheduleOpen, setScheduleOpen] = useState(false);
+    const [lastMessage, setLastMessage] = useState("");
     const [allItems, setAllItems] = useState([]);
 
     const deliveredRef = useRef(null);
@@ -32,39 +33,74 @@ export function ChatContainer({ chat, updateLastMessage }) {
     const lastNotificationTime = useRef(0);
     const lastSeenRef = useRef(null);
     const [profileOpen, setProfileOpen] = useState(false);
-
     const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
     //============ai====================
     useEffect(() => {
         if (!chat?.chatId) return;
-
         const delay = setTimeout(async () => {
-            // ✅ FILE skip
-            const lastTextMessage = [...chatItems]
-                .reverse()
-                .find((m) => m.type === "TEXT" && m.content);
+            try {
+                if (draft && draft.trim()) {
+                    // typing mode
+                } else if (lastMessage && lastMessage.trim().length > 0) {
+                    // reply mode
+                } else {
+                    setAiSuggestions(null);
+                    return;
+                }
+                if (draft && draft.length < 3) return;
 
-            const lastMessage = lastTextMessage?.content || "";
-
-            // ✅ empty avoid
-            if (!lastMessage && !draft) return;
-
-            const res = await getAISuggestions({
-                message: lastMessage,
-                draft: draft || "",
-                tone: tone || "Professional",
-            });
-
-            // ✅ SAFE SET
-            if (res && !res.error) {
-                setAiSuggestions(res);
-            } else {
-                setAiSuggestions(null);
+                const res = await getAISuggestions({
+                    message: draft ? "" : lastMessage || "",
+                    draft: draft || "",
+                    tone,
+                });
+                if (JSON.stringify(res) !== JSON.stringify(aiSuggestions)) {
+                    setAiSuggestions(res);
+                }
+            } catch (e) {
+                console.log("AI error", e);
             }
-        }, 500);
-
+        }, 600); // 🔥 600ms debounce (better)
         return () => clearTimeout(delay);
-    }, [draft, tone, chatItems]);
+    }, [draft, tone, lastMessage, chatItems]);
+
+    const refreshChat = async () => {
+        if (!chat?.chatId) return;
+
+        try {
+            const [msgRes, fileRes, schedRes] = await Promise.all([
+                getMessages(chat.chatId),
+                getFiles(chat.chatId),
+                getScheduledMessages(chat.chatId),
+            ]);
+
+            const messages = msgRes.data || [];
+
+            const files = (fileRes.data || []).map((f) => ({
+                id: "file-" + f.id,
+                chatId: f.chatId,
+                senderId: f.senderId,
+                type: "FILE",
+                fileName: f.fileName,
+                fileType: f.fileType,
+                fileUrl: f.fileUrl,
+                timestamp: f.createdAt,
+            }));
+
+            const scheduled = schedRes.data || [];
+
+            const getTime = (m) =>
+                m.scheduled ? new Date(m.scheduledTime) : new Date(m.timestamp);
+
+            const merged = [...messages, ...files, ...scheduled].sort(
+                (a, b) => getTime(a) - getTime(b)
+            );
+
+            setChatItems(merged);
+        } catch (err) {
+            console.log(err);
+        }
+    };
 
     // ================= LOAD =================
     useEffect(() => {
@@ -79,6 +115,14 @@ export function ChatContainer({ chat, updateLastMessage }) {
                 ]);
 
                 const messages = msgRes.data || [];
+
+                const lastIncoming = [...messages]
+                    .reverse()
+                    .find((m) => m.senderId !== currentUser.userId);
+
+                if (lastIncoming) {
+                    setLastMessage(lastIncoming.content);
+                }
 
                 const files = (fileRes.data || []).map((f) => ({
                     id: "file-" + f.id,
@@ -165,33 +209,37 @@ export function ChatContainer({ chat, updateLastMessage }) {
         }
     }, [chatItems, chat?.chatId]);
 
-    // ================= SOCKET =================
     useEffect(() => {
         if (!chat?.chatId) return;
-
         const unsubscribe = subscribeChat(chat.chatId, (msg) => {
-            // ✅ DELETE FIX
             if (typeof msg === "string" && msg.startsWith("DELETE:")) {
                 const id = msg.split(":")[1];
 
                 setChatItems((prev) =>
                     prev.filter((m) => String(m.id) !== String(id))
                 );
-
                 return;
             }
-
             if (String(msg.chatId) !== String(chat.chatId)) return;
 
             if (msg.content && !msg.scheduled) {
                 updateLastMessage(chat.chatId, msg.content);
+
+                if (msg.senderId !== currentUser.userId) {
+                    setLastMessage(msg.content);
+                }
             }
-
-            // ✅ UNIVERSAL REPLACE (no duplicate)
             setChatItems((prev) => {
-                let updated = prev.filter((m) => m.id !== msg.id);
+                let updated = prev.filter(
+                    (m) =>
+                        !(
+                            m.isTemp &&
+                            m.content === msg.content &&
+                            m.senderId === msg.senderId
+                        )
+                );
+                if (updated.find((m) => m.id === msg.id)) return updated;
                 updated.push(msg);
-
                 return updated.sort(
                     (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
                 );
@@ -361,6 +409,7 @@ export function ChatContainer({ chat, updateLastMessage }) {
                     currentUser={currentUser}
                     tone={tone}
                     setTone={setTone}
+                    refreshChat={refreshChat}
                 />
             </div>
 

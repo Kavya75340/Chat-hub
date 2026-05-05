@@ -44,6 +44,7 @@ export function FloatingLayout() {
                     about: u.about,
                     email: u.email,
                     unread: 0,
+                    lastMessage: "",
                 }));
 
             const groupRes = await getMyGroups();
@@ -56,6 +57,7 @@ export function FloatingLayout() {
                 type: "GROUP",
                 groupId: g.groupId,
                 unread: 0,
+                lastMessage: "",
             }));
 
             setChats([...groups, ...users]);
@@ -102,12 +104,37 @@ export function FloatingLayout() {
         setActive(key);
     }
 
+    // ================= ADD NEW GROUP =================
+    const addNewGroup = (group) => {
+        setChats((prev) => [
+            {
+                id: "g_" + group.groupId,
+                chatId: group.chatId,
+                name: group.name,
+                initials: "GR",
+                online: false,
+                type: "GROUP",
+                groupId: group.groupId,
+                unread: 0,
+                lastMessage: "",
+            },
+            ...prev, // 🔥 top pe show hoga
+        ]);
+    };
+
     // ================= UPDATE LAST MESSAGE =================
     const updateLastMessage = (chatId, content) => {
         setChats((prev) =>
-            prev.map((c) =>
-                c.chatId === chatId ? { ...c, lastMessage: content } : c
-            )
+            prev.map((c) => {
+                if (String(c.chatId) === String(chatId)) {
+                    return {
+                        ...c,
+                        lastMessage: content,
+                        updatedAt: Date.now(), // force re-render
+                    };
+                }
+                return c;
+            })
         );
     };
 
@@ -194,7 +221,7 @@ export function FloatingLayout() {
                         <GroupModal
                             users={chats.filter((c) => c.type === "USER")}
                             close={() => setShowGroupModal(false)}
-                            reload={loadChats}
+                            onGroupCreated={addNewGroup} // 🔥 ADD THIS
                         />
                     )}
                 </div>
