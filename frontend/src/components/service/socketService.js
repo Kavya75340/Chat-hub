@@ -23,7 +23,7 @@ export const connectSocketBase = () => {
         },
 
         onConnect: () => {
-            console.log("✅ WebSocket Connected");
+            console.log("WebSocket Connected");
         },
 
         onStompError: (frame) => {
@@ -35,7 +35,7 @@ export const connectSocketBase = () => {
         },
 
         onDisconnect: () => {
-            console.log("❌ WebSocket Disconnected");
+            console.log("WebSocket Disconnected");
         },
     });
 
