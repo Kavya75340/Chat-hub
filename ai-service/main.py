@@ -14,7 +14,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-client = Groq(api_key="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")
+client = Groq(api_key="Groq_API_Key")
 
 
 # ================= DTO =================
